@@ -65,12 +65,15 @@ def b58encode(v: bytes) -> str:
 
 
 class Mnemonic(object):
-    def __init__(self, language: str):
-        self.radix = 2048
-        with open(
-            "%s/%s.txt" % (self._get_directory(), language), "r", encoding="utf-8"
-        ) as f:
-            self.wordlist = [w.strip() for w in f.readlines()]
+    def __init__(self, language: str, wordlist=None, radix=2048):
+        self.radix = radix
+        if wordlist:
+            self.wordlist = wordlist
+        else:
+            with open(
+                "%s/%s.txt" % (self._get_directory(), language), "r", encoding="utf-8"
+            ) as f:
+                self.wordlist = [w.strip() for w in f.readlines()]
         if len(self.wordlist) != self.radix:
             raise ConfigurationError(
                 "Wordlist should contain %d words, but it contains %d words."
@@ -110,13 +113,15 @@ class Mnemonic(object):
             mnemo = cls(lang)
             if first in mnemo.wordlist:
                 return lang
+        
+        return "english"
 
         raise ConfigurationError("Language not detected")
 
     def generate(self, strength: int = 128) -> str:
-        if strength not in [128, 160, 192, 224, 256]:
+        if strength not in [64, 128, 160, 192, 224, 256]:
             raise ValueError(
-                "Strength should be one of the following [128, 160, 192, 224, 256], but it is not (%d)."
+                "Strength should be one of the following [64, 128, 160, 192, 224, 256], but it is not (%d)."
                 % strength
             )
         return self.to_mnemonic(os.urandom(strength // 8))
@@ -125,9 +130,9 @@ class Mnemonic(object):
     def to_entropy(self, words: Union[List[str], str]) -> bytearray:
         if not isinstance(words, list):
             words = words.split(" ")
-        if len(words) not in [12, 15, 18, 21, 24]:
+        if len(words) not in [6, 12, 15, 18, 21, 24]:
             raise ValueError(
-                "Number of words must be one of the following: [12, 15, 18, 21, 24], but it is not (%d)."
+                "Number of words must be one of the following: [6, 12, 15, 18, 21, 24], but it is not (%d)."
                 % len(words)
             )
         # Look up all the words in the list and construct the
@@ -174,9 +179,9 @@ class Mnemonic(object):
         return entropy
 
     def to_mnemonic(self, data: bytes) -> str:
-        if len(data) not in [16, 20, 24, 28, 32]:
+        if len(data) not in [8, 16, 20, 24, 28, 32]:
             raise ValueError(
-                "Data length should be one of the following: [16, 20, 24, 28, 32], but it is not (%d)."
+                "Data length should be one of the following: [8, 16, 20, 24, 28, 32], but it is not (%d)."
                 % len(data)
             )
         h = hashlib.sha256(data).hexdigest()
@@ -199,7 +204,7 @@ class Mnemonic(object):
     def check(self, mnemonic: str) -> bool:
         mnemonic_list = self.normalize_string(mnemonic).split(" ")
         # list of valid mnemonic lengths
-        if len(mnemonic_list) not in [12, 15, 18, 21, 24]:
+        if len(mnemonic_list) not in [6, 12, 15, 18, 21, 24]:
             return False
         try:
             idx = map(
